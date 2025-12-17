@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Suryoday OS: Connected Edition</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+    /* ------------------------------------------------------------------
+       1. THEME VARIABLES (Cyber-Agriculture Look)
+       ------------------------------------------------------------------ */
+    :root {
+        --primary: #ff6f00;         /* Harvest Orange */
+        --primary-glass: rgba(255, 111, 0, 0.15);
+        --secondary: #2e7d32;       /* Crop Green */
+        --accent: #29b6f6;          /* Sky Blue */
+        --danger: #d32f2f;          /* Alert Red */
+        --dark: #1a1a1a;            /* Night Mode Base */
+        --light: #ffffff;
+        
+        /* Glassmorphism Configuration */
+        --glass-bg: rgba(255, 255, 255, 0.92);
+        --glass-border: 1px solid rgba(255, 255, 255, 0.8);
+        --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        --radius: 16px;
+    }
+
+    /* ------------------------------------------------------------------
+       2. GLOBAL RESET & ANIMATIONS
+       ------------------------------------------------------------------ */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+        margin: 0; padding: 0;
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+        height: 100vh; overflow: hidden;
+        color: #333;
+    }
+
+    /* Smooth Fade In */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    /* Slide Up Modal */
+    @keyframes slideUp { 
+        from { transform: translateY(100%); } 
+        to { transform: translateY(0%); } 
+    }
+
+    /* ------------------------------------------------------------------
+       3. UTILITY COMPONENTS
+       ------------------------------------------------------------------ */
+    .hidden { display: none !important; }
+    .w-100 { width: 100%; }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .flex-center { justify-content: center; align-items: center; }
+    .flex-between { justify-content: space-between; align-items: center; }
+    .gap-10 { gap: 10px; }
+    .mt-20 { margin-top: 20px; }
+
+    /* BUTTONS */
+    .btn {
+        border: none; padding: 12px 20px; border-radius: 10px;
+        font-weight: 600; cursor: pointer; transition: 0.2s;
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        font-family: 'Poppins', sans-serif;
+    }
+    .btn:active { transform: scale(0.96); }
+    
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 15px var(--primary-glass); }
+    .btn-secondary { background: var(--secondary); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-whatsapp { background: #25D366; color: white; } /* WhatsApp Color */
+    .btn-gmail { background: #EA4335; color: white; }    /* Gmail Color */
+    
+    /* INPUTS */
+    input, select, textarea {
+        width: 100%; padding: 15px; border: 1px solid #ddd;
+        border-radius: 12px; margin-bottom: 12px; font-size: 1rem;
+        background: white; transition: 0.3s;
+    }
+    input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-glass); }
+
+    /* CARDS */
+    .card {
+        background: var(--glass-bg); backdrop-filter: blur(10px);
+        border: var(--glass-border); border-radius: var(--radius);
+        padding: 20px; box-shadow: var(--glass-shadow); margin-bottom: 15px;
+    }
+
+    /* ------------------------------------------------------------------
+       4. APP LAYOUT SYSTEM
+       ------------------------------------------------------------------ */
+    /* Full Screen App Views (Like Mobile Apps) */
+    .app-view {
+        position: fixed; inset: 0; background: #f5f5f5; z-index: 100;
+        display: none; flex-direction: column;
+        animation: slideUp 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+    .app-view.active { display: flex; }
+
+    .app-header {
+        height: 60px; background: white; padding: 0 20px;
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid #eee; flex-shrink: 0;
+    }
+    .app-body { flex: 1; overflow-y: auto; padding: 20px; }
+    .app-footer { 
+        padding: 15px 20px; background: white; border-top: 1px solid #eee; 
+        display: flex; gap: 10px; justify-content: flex-end;
+    }
+
+    /* NOTIFICATIONS */
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none; }
+    .toast {
+        background: white; padding: 15px 25px; border-radius: 50px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2); margin-bottom: 10px;
+        animation: fadeIn 0.3s; pointer-events: auto; display: flex; align-items: center; gap: 10px;
+    }
+    .toast-success { border-left: 5px solid var(--secondary); }
+    .toast-error { border-left: 5px solid var(--danger); }
+</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div id="view-login" class="app-view active" style="z-index: 200; background: #fff; justify-content: center; align-items: center;">
+    <div class="card text-center" style="width: 90%; max-width: 400px; padding: 40px;">
+        <div style="font-size: 4rem; margin-bottom: 10px;">🚜</div>
+        <h1 style="color: var(--primary); margin: 0; font-family: 'Rajdhani', sans-serif;">Suryoday OS</h1>
+        <p style="color: #666; margin-bottom: 30px;">Connected Farm Network</p>
+        
+        <div style="text-align: left;">
+            <label>Your Name</label>
+            <input type="text" id="login-name" placeholder="e.g. Ramesh Kumar">
+            
+            <label>Mobile Number</label>
+            <input type="tel" id="login-phone" placeholder="e.g. 9876543210">
+            
+            <label>Role</label>
+            <select id="login-role">
+                <option value="Farmer">Farmer</option>
+                <option value="Rental Provider">Rental Provider</option>
+                <option value="Expert">Expert/Advisor</option>
+                <option value="Admin">Admin</option>
+            </select>
+
+            <button class="btn btn-primary w-100 mt-20" onclick="Auth.login()">
+                Start System <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="view-dashboard" class="app-view">
+    <div class="app-header">
+        <div class="flex gap-10 align-center">
+            <div id="user-avatar" class="flex-center" style="width: 40px; height: 40px; background: var(--primary); color: white; border-radius: 50%; font-weight: bold;">U</div>
+            <div>
+                <h4 style="margin:0;" id="user-name-disp">Guest</h4>
+                <div style="font-size: 0.8rem; color: var(--secondary);" id="user-role-disp">Farmer</div>
+            </div>
+        </div>
+        <button class="btn btn-danger" style="padding: 8px 15px;" onclick="Auth.logout()"><i class="fas fa-power-off"></i></button>
+    </div>
+
+    <div class="app-body">
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+            <div class="flex flex-between">
+                <div>
+                    <h2 style="margin:0; font-size: 2.5rem;">28°C</h2>
+                    <p style="margin:0; opacity: 0.8;">Sunny • Humid</p>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 600;"><i class="fas fa-map-marker-alt"></i> <span id="dash-loc">GPS Active</span></div>
+                    <div style="font-size: 0.8rem; opacity: 0.8;">AQI: 45 (Good)</div>
+                </div>
+            </div>
+        </div>
+
+        <h4 style="color: #666; margin-bottom: 15px;">Apps</h4>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+            
+            <div class="flex-col flex-center" onclick="App.open('market')">
+                <div class="card p-0 flex-center" style="width: 70px; height: 70px; margin-bottom: 5px; color: #2e7d32; font-size: 1.8rem; cursor: pointer;">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 600;">Market</span>
+            </div>
+
+            <div class="flex-col flex-center" onclick="App.open('shop')">
+                <div class="card p-0 flex-center" style="width: 70px; height: 70px; margin-bottom: 5px; color: #ff6f00; font-size: 1.8rem; cursor: pointer;">
+                    <i class="fas fa-store"></i>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 600;">Shop</span>
+            </div>
+
+            <div class="flex-col flex-center" onclick="App.open('chat')">
+                <div class="card p-0 flex-center" style="width: 70px; height: 70px; margin-bottom: 5px; color: #25D366; font-size: 1.8rem; cursor: pointer;">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 600;">Connect</span>
+            </div>
+
+            <div class="flex-col flex-center" onclick="App.open('calc')">
+                <div class="card p-0 flex-center" style="width: 70px; height: 70px; margin-bottom: 5px; color: #546e7a; font-size: 1.8rem; cursor: pointer;">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 600;">Calc</span>
+            </div>
+
+            <div class="flex-col flex-center" onclick="App.open('camera')">
+                <div class="card p-0 flex-center" style="width: 70px; height: 70px; margin-bottom: 5px; color: #d32f2f; font-size: 1.8rem; cursor: pointer;">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 600;">Scan</span>
+            </div>
+
+            <div class="flex-col flex-center" onclick="App.open('rentals')">
+                <div class="card p-0 flex-center" style="width: 70px; height: 70px; margin: 0 auto; margin-bottom: 5px; color: #e65100; font-size: 1.8rem; cursor: pointer;">
+                    <i class="fas fa-tractor"></i>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 600;">Rentals</span>
+            </div>
+            
+            <div id="icon-admin" class="flex-col flex-center hidden" onclick="App.open('admin')">
+                <div class="card p-0 flex-center" style="width: 70px; height: 70px; margin: 0 auto; margin-bottom: 5px; background: #333; color: red; font-size: 1.8rem; cursor: pointer;">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <span style="font-size: 0.8rem; font-weight: 600;">Admin</span>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ==========================================================================
+       SECTION 6: CORE LOGIC (AUTH & NAV)
+       ========================================================================== */
+    
+    // 1. STATE MANAGEMENT
+    const State = {
+        user: JSON.parse(localStorage.getItem('suryoday_user')) || null,
+        cart: []
+    };
+
+    // 2. UI UTILS
+    const UI = {
+        toast: (msg, type='success') => {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.innerHTML = `<span>${msg}</span>`;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+    };
+
+    // 3. AUTHENTICATION
+    const Auth = {
+        login: () => {
+            const name = document.getElementById('login-name').value;
+            const phone = document.getElementById('login-phone').value;
+            const role = document.getElementById('login-role').value;
+
+            if(!name || !phone) return UI.toast("Please enter details", "error");
+
+            const user = { name, phone, role };
+            localStorage.setItem('suryoday_user', JSON.stringify(user));
+            State.user = user;
+            
+            Auth.check();
+        },
+        logout: () => {
+            localStorage.removeItem('suryoday_user');
+            location.reload();
+        },
+        check: () => {
+            if(State.user) {
+                document.getElementById('view-login').classList.remove('active');
+                document.getElementById('view-dashboard').classList.add('active');
+                
+                // Update Header
+                document.getElementById('user-name-disp').innerText = State.user.name;
+                document.getElementById('user-role-disp').innerText = State.user.role;
+                document.getElementById('user-avatar').innerText = State.user.name.charAt(0);
+
+                // Admin Check
+                if(State.user.phone === "9256311611") {
+                    document.getElementById('icon-admin').classList.remove('hidden');
+                    UI.toast("Admin Privileges Active");
+                } else {
+                    UI.toast(`Welcome, ${State.user.name}`);
+                }
+            }
+        }
+    };
+
+    // 4. NAVIGATION
+    const App = {
+        open: (id) => {
+            const el = document.getElementById('view-' + id);
+            if(el) {
+                el.classList.add('active');
+                // Init specific modules if needed
+                if(id === 'camera') Camera.start();
+            } else {
+                UI.toast("Loading Module...", "success");
+            }
+        },
+        close: (id) => {
+            const el = document.getElementById('view-' + id);
+            if(el) {
+                el.classList.remove('active');
+                if(id === 'camera') Camera.stop();
+            }
+        }
+    };
+
+    // Initialize on Load
+    window.onload = () => {
+        Auth.check();
+    };
+
+</script>
+<div id="view-shop" class="app-view">
+    <div class="app-header">
+        <h3><i class="fas fa-store text-primary"></i> Agri-Shop</h3>
+        <button class="btn btn-secondary" onclick="App.close('shop')">Back</button>
+    </div>
+    <div class="app-body">
+        <div class="flex gap-10" style="overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px;">
+            <button class="btn btn-dark" onclick="Shop.render('all')">All</button>
+            <button class="btn btn-secondary" onclick="Shop.render('Seeds')">Seeds</button>
+            <button class="btn btn-secondary" onclick="Shop.render('Fertilizer')">Fertilizer</button>
+            <button class="btn btn-secondary" onclick="Shop.render('Tools')">Tools</button>
+        </div>
+
+        <div id="shop-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px;">
+            </div>
+    </div>
+    <div class="app-footer">
+        <button class="btn btn-primary w-100" onclick="App.open('cart')">View Cart</button>
+    </div>
+</div>
+
+<div id="view-cart" class="app-view">
+    <div class="app-header">
+        <h3><i class="fas fa-shopping-cart"></i> Your Cart</h3>
+        <button class="btn btn-secondary" onclick="App.close('cart')">Back</button>
+    </div>
+    <div class="app-body">
+        <div id="cart-list" class="flex-col gap-10">
+            </div>
+        <div id="cart-empty" class="text-center mt-20 hidden">
+            <h2 style="opacity: 0.3;">🛒</h2>
+            <p>Cart is empty</p>
+        </div>
+    </div>
+    <div class="app-footer flex-col">
+        <div class="flex flex-between w-100 mb-10">
+            <strong>Total:</strong>
+            <strong class="text-primary" style="font-size: 1.2rem;" id="cart-total">₹0</strong>
+        </div>
+        <button class="btn btn-whatsapp w-100" onclick="Cart.checkoutWhatsApp()">
+            <i class="fab fa-whatsapp"></i> Send Order to Dealer
+        </button>
+    </div>
+</div>
+
+<div id="view-calc" class="app-view">
+    <div class="app-header">
+        <h3><i class="fas fa-calculator"></i> Calc Pro</h3>
+        <button class="btn btn-secondary" onclick="App.close('calc')">Back</button>
+    </div>
+    <div class="app-body flex-center" style="background: #222;">
+        <div style="width: 100%; max-width: 350px;">
+            <div id="calc-screen" style="background: #a5d6a7; color: #1b5e20; font-family: monospace; font-size: 2.5rem; text-align: right; padding: 20px; border-radius: 10px; margin-bottom: 20px; overflow-x: auto;">0</div>
+            
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                <button class="btn btn-danger" onclick="Calc.clear()">AC</button>
+                <button class="btn btn-secondary" onclick="Calc.add('(')">(</button>
+                <button class="btn btn-secondary" onclick="Calc.add(')')">)</button>
+                <button class="btn btn-primary" onclick="Calc.add('/')">÷</button>
+                
+                <button class="btn btn-light" onclick="Calc.add(7)">7</button>
+                <button class="btn btn-light" onclick="Calc.add(8)">8</button>
+                <button class="btn btn-light" onclick="Calc.add(9)">9</button>
+                <button class="btn btn-primary" onclick="Calc.add('*')">×</button>
+                
+                <button class="btn btn-light" onclick="Calc.add(4)">4</button>
+                <button class="btn btn-light" onclick="Calc.add(5)">5</button>
+                <button class="btn btn-light" onclick="Calc.add(6)">6</button>
+                <button class="btn btn-primary" onclick="Calc.add('-')">-</button>
+                
+                <button class="btn btn-light" onclick="Calc.add(1)">1</button>
+                <button class="btn btn-light" onclick="Calc.add(2)">2</button>
+                <button class="btn btn-light" onclick="Calc.add(3)">3</button>
+                <button class="btn btn-primary" onclick="Calc.add('+')">+</button>
+                
+                <button class="btn btn-light" onclick="Calc.add(0)" style="grid-column: span 2;">0</button>
+                <button class="btn btn-light" onclick="Calc.add('.')">.</button>
+                <button class="btn btn-success" onclick="Calc.solve()">=</button>
+            </div>
+
+            <button class="btn btn-whatsapp w-100 mt-20" onclick="Calc.share()">
+                <i class="fab fa-whatsapp"></i> Share Result
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ==========================================================================
+       SECTION 8: FEATURE LOGIC
+       ========================================================================== */
+    
+    // --- 8.1 SHOP LOGIC ---
+    const PRODUCTS = [
+        { id: 1, name: "Hybrid Wheat", cat: "Seeds", price: 40, img: "🌾" },
+        { id: 2, name: "Basmati Rice", cat: "Seeds", price: 60, img: "🌾" },
+        { id: 3, name: "Urea Gold", cat: "Fertilizer", price: 266, img: "🧪" },
+        { id: 4, name: "DAP (18:46:0)", cat: "Fertilizer", price: 1350, img: "🧪" },
+        { id: 5, name: "Spray Pump", cat: "Tools", price: 2500, img: "🚿" },
+        { id: 6, name: "Sickle (Darati)", cat: "Tools", price: 150, img: "⚒️" },
+    ];
+
+    const Shop = {
+        render: (filter) => {
+            const grid = document.getElementById('shop-grid');
+            const items = filter === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.cat === filter);
+            
+            grid.innerHTML = items.map(p => `
+                <div class="card p-0 text-center" style="overflow: hidden;">
+                    <div style="font-size: 3rem; background: #f5f5f5; padding: 20px;">${p.img}</div>
+                    <div style="padding: 10px;">
+                        <div style="font-weight: 600;">${p.name}</div>
+                        <div style="color: #666; font-size: 0.8rem;">${p.cat}</div>
+                        <div style="color: var(--primary); font-weight: bold; margin: 5px 0;">₹${p.price}</div>
+                        <button class="btn btn-primary w-100" style="padding: 8px;" onclick="Cart.add(${p.id})">Add +</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    };
+
+    // --- 8.2 CART & CHECKOUT LOGIC ---
+    const Cart = {
+        add: (id) => {
+            const p = PRODUCTS.find(x => x.id === id);
+            State.cart.push(p);
+            UI.toast(`Added ${p.name}`);
+            Cart.render();
+        },
+        remove: (idx) => {
+            State.cart.splice(idx, 1);
+            Cart.render();
+        },
+        render: () => {
+            const list = document.getElementById('cart-list');
+            if(State.cart.length === 0) {
+                list.innerHTML = "";
+                document.getElementById('cart-empty').classList.remove('hidden');
+                document.getElementById('cart-total').innerText = "₹0";
+                return;
+            }
+            document.getElementById('cart-empty').classList.add('hidden');
+            
+            let total = 0;
+            list.innerHTML = State.cart.map((item, i) => {
+                total += item.price;
+                return `
+                <div class="card p-0 flex flex-between" style="padding: 15px;">
+                    <div class="flex gap-10">
+                        <div style="font-size: 1.5rem;">${item.img}</div>
+                        <div>
+                            <div style="font-weight: 600;">${item.name}</div>
+                            <div style="color: var(--primary);">₹${item.price}</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-danger" style="padding: 5px 10px;" onclick="Cart.remove(${i})">X</button>
+                </div>`;
+            }).join('');
+            document.getElementById('cart-total').innerText = "₹" + total;
+        },
+        // CONNECTED FEATURE: WHATSAPP CHECKOUT
+        checkoutWhatsApp: () => {
+            if(State.cart.length === 0) return UI.toast("Cart is empty", "error");
+            
+            let msg = `*New Order from ${State.user ? State.user.name : 'Guest'}*\n\n`;
+            let total = 0;
+            State.cart.forEach(item => {
+                msg += `• ${item.name}: ₹${item.price}\n`;
+                total += item.price;
+            });
+            msg += `\n*Total: ₹${total}*`;
+            
+            // Your Admin Number Here (Replace 919256311611 with yours)
+            const adminNumber = "919256311611"; 
+            const url = `https://wa.me/${adminNumber}?text=${encodeURIComponent(msg)}`;
+            
+            window.open(url, '_blank');
+        }
+    };
+
+    // --- 8.3 CALCULATOR LOGIC ---
+    const Calc = {
+        expr: "",
+        add: (v) => {
+            Calc.expr += v;
+            document.getElementById('calc-screen').innerText = Calc.expr;
+        },
+        clear: () => {
+            Calc.expr = "";
+            document.getElementById('calc-screen').innerText = "0";
+        },
+        solve: () => {
+            try {
+                const res = eval(Calc.expr);
+                document.getElementById('calc-screen').innerText = res;
+                Calc.expr = res.toString();
+            } catch(e) {
+                document.getElementById('calc-screen').innerText = "Error";
+                Calc.expr = "";
+            }
+        },
+        // CONNECTED FEATURE: SHARE RESULT
+        share: () => {
+            const val = document.getElementById('calc-screen').innerText;
+            const msg = `Calculated Result from Suryoday OS: ${val}`;
+            const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
+        }
+    };
+
+    // Init Shop on Load
+    Shop.render('all');
+
+</script>
+<div id="view-market" class="app-view">
+    <div class="app-header">
+        <h3><i class="fas fa-chart-line text-success"></i> Mandi Rates</h3>
+        <button class="btn btn-secondary" onclick="App.close('market')">Back</button>
+    </div>
+    <div class="app-body">
+        <div class="card">
+            <h4>Price Trends (Wheat)</h4>
+            <canvas id="marketChart" style="max-height: 200px;"></canvas>
+        </div>
+
+        <div class="card p-0" style="overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="background: #333; color: white;">
+                    <tr><th style="padding:15px;">Crop</th><th>Price/Q</th><th>Action</th></tr>
+                </thead>
+                <tbody id="market-list">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="view-rentals" class="app-view">
+    <div class="app-header">
+        <h3><i class="fas fa-tractor" style="color: #e65100;"></i> Rental Hub</h3>
+        <button class="btn btn-secondary" onclick="App.close('rentals')">Back</button>
+    </div>
+    <div class="app-body">
+        <div id="rental-list" class="flex-col gap-10">
+            </div>
+    </div>
+    <div class="app-footer">
+        <button class="btn btn-whatsapp w-100" onclick="Rentals.listMyVehicle()">
+            <i class="fab fa-whatsapp"></i> List My Vehicle
+        </button>
+    </div>
+</div>
+
+<div id="view-chat" class="app-view">
+    <div class="app-header">
+        <h3><i class="fas fa-comments text-primary"></i> Farmer Connect</h3>
+        <button class="btn btn-secondary" onclick="App.close('chat')">Back</button>
+    </div>
+    <div class="app-body" style="background: #e5ddd5; display: flex; flex-direction: column;">
+        <div id="chat-feed" style="flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto;">
+            <div class="card p-0" style="background: #dcf8c6; align-self: flex-end; padding: 10px 15px; border-radius: 10px 0 10px 10px; max-width: 80%;">
+                <strong>You:</strong> <br> Is anyone renting a Rotavator near Noida?
+            </div>
+            <div class="card p-0" style="background: white; align-self: flex-start; padding: 10px 15px; border-radius: 0 10px 10px 10px; max-width: 80%;">
+                <strong style="color: var(--primary);">System:</strong> <br> To chat with real farmers in your area, join the WhatsApp Group below.
+            </div>
+        </div>
+    </div>
+    <div class="app-footer flex-col">
+        <p style="text-align: center; font-size: 0.8rem; color: #666; margin: 0;">Serverless Mode Active</p>
+        <button class="btn btn-whatsapp w-100" onclick="Chat.joinGroup()">
+            <i class="fab fa-whatsapp"></i> Join Real WhatsApp Group
+        </button>
+    </div>
+</div>
+
+<script>
+    /* ==========================================================================
+       SECTION 10: CONNECTED LOGIC
+       ========================================================================== */
+    
+    // --- 10.1 MARKET LOGIC ---
+    const Market = {
+        data: [
+            { crop: "Wheat", price: 2250, phone: "919256311611" }, // Replace with real agent numbers
+            { crop: "Rice", price: 3400, phone: "919256311611" },
+            { crop: "Cotton", price: 6200, phone: "919256311611" },
+            { crop: "Onion", price: 1800, phone: "919256311611" }
+        ],
+        init: () => {
+            // Render Table
+            const tbody = document.getElementById('market-list');
+            tbody.innerHTML = Market.data.map(item => `
+                <tr>
+                    <td style="padding:15px; border-bottom:1px solid #eee;"><strong>${item.crop}</strong></td>
+                    <td style="padding:15px; border-bottom:1px solid #eee; color:green;">₹${item.price}</td>
+                    <td style="padding:15px; border-bottom:1px solid #eee;">
+                        <a href="tel:${item.phone}" class="btn btn-primary" style="padding: 5px 10px; font-size: 0.8rem;">
+                            <i class="fas fa-phone"></i> Call
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Render Chart
+            const ctx = document.getElementById('marketChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                    datasets: [{
+                        label: 'Wheat Price',
+                        data: [2200, 2220, 2180, 2250, 2280],
+                        borderColor: '#ff6f00',
+                        tension: 0.4,
+                        fill: false
+                    }]
+                }
+            });
+        }
+    };
+
+    // --- 10.2 RENTALS LOGIC ---
+    const Rentals = {
+        vehicles: [
+            { name: "Mahindra 575", owner: "Ramesh", rate: 800, phone: "919256311611" },
+            { name: "JCB Excavator", owner: "Suresh", rate: 1500, phone: "919256311611" },
+            { name: "Harvest Combine", owner: "Kartar", rate: 2200, phone: "919256311611" }
+        ],
+        init: () => {
+            const list = document.getElementById('rental-list');
+            list.innerHTML = Rentals.vehicles.map(v => `
+                <div class="card p-0 flex flex-between" style="padding: 15px;">
+                    <div>
+                        <h4 style="margin:0;">${v.name}</h4>
+                        <div style="font-size: 0.8rem; color: #666;">Owner: ${v.owner}</div>
+                        <div style="color: var(--primary); font-weight: bold;">₹${v.rate}/hr</div>
+                    </div>
+                    <button class="btn btn-whatsapp" onclick="Rentals.book('${v.name}', '${v.phone}')">
+                        Book
+                    </button>
+                </div>
+            `).join('');
+        },
+        // CONNECTED FEATURE: WhatsApp Booking
+        book: (vehicle, phone) => {
+            const msg = `Hello, I want to book your *${vehicle}* seen on Suryoday OS. Is it available?`;
+            const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
+        },
+        listMyVehicle: () => {
+            const msg = `I want to list my vehicle on Suryoday OS.\nName: \nRate: \nPhoto: `;
+            // Send to Admin
+            const url = `https://wa.me/919256311611?text=${encodeURIComponent(msg)}`; 
+            window.open(url, '_blank');
+        }
+    };
+
+    // --- 10.3 CHAT LOGIC ---
+    const Chat = {
+        joinGroup: () => {
+            // Replace this with your real WhatsApp Group Invite Link
+            // Example: https://chat.whatsapp.com/HzX..........
+            const groupLink = "https://chat.whatsapp.com/"; 
+            
+            if(groupLink === "https://chat.whatsapp.com/") {
+                alert("Please add your Real WhatsApp Group Link in the code (Line: Chat.joinGroup)");
+            } else {
+                window.open(groupLink, '_blank');
+            }
+        }
+    };
+
+    // Init Modules
+    Market.init();
+    Rentals.init();
+
+</script>
+Here is the **Final Part (Part 5 of 5)**.
+
+This section adds the **Fasal Doctor (Camera Scanner)** and the **Admin Panel**. It uses your phone's native sharing capabilities to send photos to experts.
+
+**Instructions:** Paste this **immediately after Part 4** and save the file.
+
+### **PART 5: Camera, Admin & System Boot**
+
+```html
+<div id="view-camera" class="app-view">
+    <div class="app-header">
+        <h3><i class="fas fa-camera text-danger"></i> Fasal Doctor</h3>
+        <button class="btn btn-secondary" onclick="App.close('camera')">Back</button>
+    </div>
+    <div class="app-body flex-col flex-center" style="background: black; padding: 0;">
+        <div id="cam-feed-container" class="w-100 h-100 flex-center" style="position: relative;">
+            <video id="video-feed" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+            
+            <div style="position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); color: white; padding: 5px 10px; border-radius: 5px; font-size: 0.8rem;">
+                <i class="fas fa-crosshairs"></i> AI Detection Active
+            </div>
+            
+            <button class="btn" style="position: absolute; bottom: 40px; width: 70px; height: 70px; border-radius: 50%; background: white; border: 4px solid #ddd;" onclick="Camera.capture()"></button>
+        </div>
+
+        <div id="cam-result" class="hidden w-100 h-100 flex-col flex-center" style="background: #f5f5f5; padding: 20px;">
+            <img id="captured-img" style="max-width: 100%; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); margin-bottom: 20px;">
+            
+            <div class="card w-100 text-center">
+                <h3 class="text-danger">Issue Detected?</h3>
+                <p style="color: #666; font-size: 0.9rem;">Share this photo with an expert on WhatsApp to get a cure.</p>
+                
+                <button class="btn btn-whatsapp w-100 mt-20" onclick="Camera.shareToExpert()">
+                    <i class="fab fa-whatsapp"></i> Send to Expert
+                </button>
+                <button class="btn btn-secondary w-100 mt-20" onclick="Camera.reset()">Retake</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="view-admin" class="app-view">
+    <div class="app-header" style="background: #1a1a1a; color: white;">
+        <h3><i class="fas fa-shield-alt text-danger"></i> Admin Panel</h3>
+        <button class="btn btn-danger" onclick="App.close('admin')">EXIT</button>
+    </div>
+    <div class="app-body" style="background: #121212; color: #ccc;">
+        
+        <div class="flex gap-10 mb-20">
+            <div class="card p-0 flex-center flex-col w-100" style="background: #222; border: 1px solid #333; padding: 15px;">
+                <h2 style="margin:0; color: var(--primary);">1</h2>
+                <small>Active User</small>
+            </div>
+            <div class="card p-0 flex-center flex-col w-100" style="background: #222; border: 1px solid #333; padding: 15px;">
+                <h2 style="margin:0; color: var(--secondary);">Safe</h2>
+                <small>System Status</small>
+            </div>
+        </div>
+
+        <div class="card p-0 mb-20" style="background: #222; border: 1px solid #333; overflow: hidden;">
+            <div style="padding: 10px 15px; background: #333; font-weight: bold; color: white;">Current Session</div>
+            <div style="padding: 15px;">
+                <p><strong>Name:</strong> <span id="adm-name">--</span></p>
+                <p><strong>Role:</strong> <span id="adm-role">--</span></p>
+                <p><strong>Phone:</strong> <span id="adm-phone">--</span></p>
+            </div>
+        </div>
+
+        <button class="btn btn-danger w-100" onclick="Admin.reset()">
+            <i class="fas fa-trash"></i> Factory Reset App
+        </button>
+        <p style="text-align: center; font-size: 0.8rem; margin-top: 10px; opacity: 0.5;">
+            Version 3.0 (Serverless Edition)
+        </p>
+    </div>
+</div>
+
+<script>
+    /* ==========================================================================
+       SECTION 12: FINAL LOGIC (CAMERA & ADMIN)
+       ========================================================================== */
+
+    // --- 12.1 CAMERA LOGIC ---
+    const Camera = {
+        stream: null,
+        capturedBlob: null,
+        
+        start: () => {
+            const video = document.getElementById('video-feed');
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                    .then(stream => {
+                        Camera.stream = stream;
+                        video.srcObject = stream;
+                        video.play();
+                    })
+                    .catch(err => UI.toast("Camera Error: " + err, "error"));
+            } else {
+                UI.toast("Camera not supported", "error");
+            }
+        },
+        
+        stop: () => {
+            if (Camera.stream) {
+                Camera.stream.getTracks().forEach(track => track.stop());
+            }
+        },
+        
+        capture: () => {
+            const video = document.getElementById('video-feed');
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            // Display Image
+            const dataUrl = canvas.toDataURL('image/png');
+            document.getElementById('captured-img').src = dataUrl;
+            
+            // Switch Views
+            document.getElementById('cam-feed-container').classList.add('hidden');
+            document.getElementById('cam-result').classList.remove('hidden');
+            
+            // Convert to Blob for Sharing
+            canvas.toBlob(blob => { Camera.capturedBlob = blob; });
+            
+            Camera.stop();
+        },
+        
+        reset: () => {
+            document.getElementById('cam-result').classList.add('hidden');
+            document.getElementById('cam-feed-container').classList.remove('hidden');
+            Camera.start();
+        },
+
+        // CONNECTED FEATURE: SHARE VIA WHATSAPP/SYSTEM
+        shareToExpert: async () => {
+            // Check if native sharing is supported (Mobile Phones)
+            if (navigator.share && Camera.capturedBlob) {
+                const file = new File([Camera.capturedBlob], "crop_issue.png", { type: "image/png" });
+                try {
+                    await navigator.share({
+                        title: 'Fasal Doctor Report',
+                        text: 'Hello Expert, please look at this crop issue from Suryoday OS.',
+                        files: [file]
+                    });
+                    UI.toast("Shared successfully!");
+                } catch (err) {
+                    console.log("Share failed", err);
+                    Camera.fallbackShare();
+                }
+            } else {
+                // Desktop Fallback
+                Camera.fallbackShare();
+            }
+        },
+
+        fallbackShare: () => {
+            // Since we can't programmatically attach images to WhatsApp Web, we guide the user
+            const adminNumber = "919256311611"; 
+            const msg = "I have a crop issue. (Please attach the photo manually)";
+            const url = `https://wa.me/${adminNumber}?text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
+            UI.toast("Opening WhatsApp... Please attach the photo.");
+        }
+    };
+
+    // --- 12.2 ADMIN LOGIC ---
+    const Admin = {
+        init: () => {
+            if(State.user) {
+                document.getElementById('adm-name').innerText = State.user.name;
+                document.getElementById('adm-role').innerText = State.user.role;
+                document.getElementById('adm-phone').innerText = State.user.phone;
+            }
+        },
+        reset: () => {
+            if(confirm("Are you sure? This will wipe all app data.")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+    };
+
+    // Initialize Admin Data when opening
+    document.getElementById('icon-admin').addEventListener('click', Admin.init);
+
+</script>
+</body>
+</html>
+```
+
